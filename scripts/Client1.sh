@@ -32,6 +32,7 @@ data_dir = "/opt/consul/client1"
 bind_addr = "192.168.1.3"
 client_addr = "0.0.0.0"
 ui = true
+retry_join = ["192.168.1.2"]
 END
 
 #restarting all services
