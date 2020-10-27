@@ -288,3 +288,10 @@ job "webserver" {
 }
 END
 ```
+
+# Gebruikte bronnen
+-slides uit de les
+-https://learn.hashicorp.com/collections/consul/getting-started
+-https://learn.hashicorp.com/tutorials/nomad/get-started-cluster?in=nomad/get-started
+-https://www.vagrantup.com/docs/provisioning/shell
+-https://www.vagrantup.com/docs/multi-machine
