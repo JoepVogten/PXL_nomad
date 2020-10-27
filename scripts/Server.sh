@@ -31,6 +31,7 @@ client_addr = "0.0.0.0"
 data_dir = "/opt/nomad/server"
 ui = true
 bootstrap_expect = 1
+server = true
 END
 
 systemctl daemon-reload
