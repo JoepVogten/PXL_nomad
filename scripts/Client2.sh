@@ -10,7 +10,7 @@ sudo mkdir /opt/nomad/client2
 #making a new one
 cat << END >/etc/nomad.d/client2.hcl
 name = "client2"
-data_dir = "/opt/nomad/nomad"
+data_dir = "/opt/nomad/client2"
 bind_addr = "192.168.1.4"
 client {
     enabled = true
