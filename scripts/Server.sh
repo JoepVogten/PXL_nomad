@@ -27,7 +27,7 @@ sudo mkdir /opt/consul/server
 
 cat << END >/etc/consul.d/server.hcl
 bind_addr = "192.168.1.2"
-client_addr = ""0.0.0.0"
+client_addr = "0.0.0.0"
 data_dir = "/opt/nomad/server"
 ui = true
 bootstrap_expect = 1
