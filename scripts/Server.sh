@@ -28,12 +28,14 @@ sudo mkdir /opt/consul/server
 cat << END >/etc/consul.d/server.hcl
 bind_addr = "192.168.1.2"
 client_addr = "0.0.0.0"
-data_dir = "/opt/nomad/server"
+data_dir = "/opt/consul/server"
 ui = true
 bootstrap_expect = 1
 server = true
 END
 
 systemctl daemon-reload
-systemctl restart nomad
-systemctl restart consul
+systemctl enable nomad
+systemctl start nomad
+systemctl enable consul
+systemctl start consul
