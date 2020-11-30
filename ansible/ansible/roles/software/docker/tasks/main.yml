@@ -1,26 +1,24 @@
 ---
-- name: install cronie
+- name: add repo
+  command: yum-config-manager --add-repo=https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo
+
+- name: install docker-ce
   yum:
-    name: cronie
+    name: docker-ce
     state: installed
-  notify: restart crond
 
-- debug:
-    msg: The variable resolved to {{ crond__content }}
+- name: install docker-ce-cli
+  yum:
+    name: docker-ce-cli
+    state: installed
 
-- name: add hello script
-  template:
-    src: hello.sh.j2
-    dest: /usr/local/bin/hello.sh
-    owner: "root"
-    group: "root"
-    mode: 0755
-  notify: restart crond
+  - name: install container.io
+  yum:
+    name: container.io
+    state: installed
 
-- name: configure hello cron
-  cron:
-    name: hourly hello
-    user: root
-    special_time: hourly
-    job: "/usr/local/bin/hello.sh"
-    state: absent
+- name: enable service docker
+  service:
+    name: docker
+    enabled: yes
+  notify: restart docker
