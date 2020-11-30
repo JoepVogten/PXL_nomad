@@ -36,5 +36,7 @@ END
 
 #restarting all services
 systemctl daemon-reload
-systemctl restart nomad
-systemctl restart consul
+systemctl enable nomad
+systemctl start nomad
+systemctl enable consul
+systemctl start consul
