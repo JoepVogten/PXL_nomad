@@ -1,0 +1,26 @@
+#!/bin/bash
+# {{ ansible_managed }}
+# {{ ansible_eth1.ipv4.address }}
+
+data_dir = "/opt/nomad"
+log_level = "DEBUG"
+bind_addr = {{ ansible_default_ipv4.address }}
+
+{% if ansible_hostname == 'CLIENT' %}
+    name = "server"
+    server {
+        enabled = true
+        bootstrap_expect = 1
+    }
+{% else %}
+    client {
+        enabled = true
+        servers = ["192.168.1.2"]
+    }
+
+    {% if ansible_hostname == 'CLIENT1' %}
+        name = "client1"
+    {% else %}
+        name = "client2"
+    {% endif %}
+{% endif %}
