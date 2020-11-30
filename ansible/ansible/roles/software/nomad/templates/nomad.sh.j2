@@ -1,10 +1,9 @@
 #!/bin/bash
 # {{ ansible_managed }}
-# {{ ansible_eth1.ipv4.address }}
 
+bind_addr = {{ ansible_eth1.ipv4.address }}
 data_dir = "/opt/nomad"
 log_level = "DEBUG"
-bind_addr = {{ ansible_default_ipv4.address }}
 
 {% if ansible_hostname == 'CLIENT' %}
     name = "server"
