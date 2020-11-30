@@ -5,7 +5,7 @@ bind_addr = {{ ansible_eth1.ipv4.address }}
 data_dir = "/opt/nomad"
 log_level = "DEBUG"
 
-{% if ansible_hostname == 'CLIENT' %}
+{% if ansible_hostname == 'SERVER' %}
     name = "server"
     server {
         enabled = true
