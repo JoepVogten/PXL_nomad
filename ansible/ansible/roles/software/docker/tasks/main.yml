@@ -12,9 +12,9 @@
     name: docker-ce-cli
     state: installed
 
-  - name: install container.io
+- name: install containerd.io
   yum:
-    name: container.io
+    name: containerd.io
     state: installed
 
 - name: enable service docker

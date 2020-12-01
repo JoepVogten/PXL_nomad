@@ -2,13 +2,21 @@
 # vi: set ft=ruby :
 VAGRANTFILE_API_VERSION = "2"
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  # config.vbguest.auto_update = false (werkt niet?)
   config.vm.box = "centos/7"
-  config.vbguest.auto_update = false
-  config.vm.provision "shell", path: "installAns.sh"
+  config.vm.provision "shell", path: "ansible/installAns.sh"
+  
+  config.vm.provider :virtualbox do |virtualbox, override|
+    virtualbox.customize ["modifyvm", :id, "--memory", 2048]
+  end
 
-  config.vm.define :server do |server|
+  config.vm.provider :lxc do |lxc, override|
+    override.vm.box = "visibilityspots/centos-7.x-minimal"
+  end
+
+  config.vm.define "server" do |server|
     server.vm.hostname = "server"
-    server.vm.network = "private_network", ip: "192.168.1.2"
+    server.vm.network "private_network", ip: "192.168.1.2"
 
     server.vm.provision "ansible_local" do |ansible|
       ansible.config_file = "ansible/ansible/ansible.cfg"
@@ -42,13 +50,4 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
       end
     end
   end
-  
-  config.vm.provider :virtualbox do |virtualbox, override|
-    virtualbox.customize ["modifyvm", :id, "--memory", 2048]
-  end
-
-  config.vm.provider :lxc do |lxc, override|
-    override.vm.box = "visibilityspots/centos-7.x-minimal"
-  end
-  
 end
