@@ -2,8 +2,8 @@
 # {{ ansible_managed }}
 
 bind_addr = "{{ ansible_eth1.ipv4.address }}"
-data_dir = "/opt/nomad"
 log_level = "DEBUG"
+data_dir = "/opt/nomad"
 
 telemetry {
   collection_interval = "1s"
@@ -14,21 +14,37 @@ telemetry {
 }
 
 {% if ansible_hostname == 'SERVER' %}
-    name = "server"
-    server {
-        enabled = true
-        bootstrap_expect = 1
-    }
+name = "server"
+server {
+	enabled = true
+	bootstrap_expect = 1
+}
+	
 {% else %}
-    client {
-        enabled = true
-        servers = ["192.168.1.2"]
-        network_interface = "eth1"
-    }
+client {
+	enabled = true
+	servers = ["192.168.1.2"]
+	network_interface = "eth1"
+}
+plugin "docker" {
+	config {
+		gc {
+			dangling_containers {
+				enabled = false
+			}
+		}
+	}
+}
+	
 
-    {% if ansible_hostname == 'CLIENT1' %}
-        name = "client1"
-    {% else %}
-        name = "client2"
-    {% endif %}
+{% if ansible_hostname == 'AGENT1' %}
+name= "agent1"
+{% endif %}
+	
+
+{% if ansible_hostname == 'AGENT2' %}
+name= "agent2"
+{% endif %}
+
+
 {% endif %}
