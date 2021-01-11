@@ -2,8 +2,7 @@
 # vi: set ft=ruby :
 VAGRANTFILE_API_VERSION = "2"
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
-  config.vbguest.auto_update = false
-  config.vm.provision "shell", path: "installAnsible.sh"
+  config.vm.provision "shell", path: "ansible/installAnsible.sh"
   config.vm.box = "centos/7"
 
   config.vm.define "server" do |server|
@@ -15,8 +14,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 	
 	
 	server.vm.provision "ansible_local" do |ansible|
-      ansible.config_file = "ansible/ansible.cfg"
-      ansible.playbook = "ansible/plays/server.yml"
+      ansible.config_file = "ansible/ansible/ansible.cfg"
+      ansible.playbook = "ansible/ansible/plays/server.yml"
       ansible.groups = {
         "servers" => ["server"],
 #        "servers:vars" => {"software__content" => "servers_value"}
@@ -33,8 +32,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     agent1.vm.network "private_network", ip: "192.168.1.3"
 	
 	agent1.vm.provision "ansible_local" do |ansible|
-      ansible.config_file = "ansible/ansible.cfg"
-      ansible.playbook = "ansible/plays/agent.yml"
+      ansible.config_file = "ansible/ansible/ansible.cfg"
+      ansible.playbook = "ansible/ansible/plays/agent.yml"
       ansible.groups = {
         "agents" => ["agent1"],
 #        "agents:vars" => {"software__content" => "agents_value"}
@@ -51,8 +50,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     agent2.vm.network "private_network", ip: "192.168.1.4"
 	
 	agent2.vm.provision "ansible_local" do |ansible|
-      ansible.config_file = "ansible/ansible.cfg"
-      ansible.playbook = "ansible/plays/agent.yml"
+      ansible.config_file = "ansible/ansible/ansible.cfg"
+      ansible.playbook = "ansible/ansible/plays/agent.yml"
       ansible.groups = {
         "agents" => ["agent2"],
 #        "agents:vars" => {"software__content" => "agents_value"}
