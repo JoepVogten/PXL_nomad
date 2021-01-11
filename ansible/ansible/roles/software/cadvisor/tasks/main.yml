@@ -2,6 +2,6 @@
 - name: nomad job cadvisor
   template:
     src: cadvisor.nomad.sh.j2
-    dest: /etc/nomad/cadvisor.nomad
+    dest: /opt/nomad/cadvisor.nomad
   notify: start cadvisor job
 
