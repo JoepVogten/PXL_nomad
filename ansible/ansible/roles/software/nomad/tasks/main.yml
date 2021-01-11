@@ -10,7 +10,7 @@
 - name: add nomad script
   template:
     src: nomad.sh.j2
-    dest: /etc/nomad.d/nomad.hc1
+    dest: /etc/nomad.d/nomad.hcl
     owner: "root"
     group: "root"
     mode: 0744
