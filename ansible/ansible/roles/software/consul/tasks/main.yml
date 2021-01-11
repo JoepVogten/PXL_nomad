@@ -10,9 +10,9 @@
 - name: add consul script
   template:
     src: consul.sh.j2
-    dest: /etc/consul.d/consul.hc1
-    owner: "root"
-    group: "root"
+    dest: /etc/consul.d/consul.hcl
+    owner: "consul"
+    group: "consul"
     mode: 0744
 
 - name: enable service consul
