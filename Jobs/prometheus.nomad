@@ -70,7 +70,7 @@ scrape_configs:
       format: ['prometheus']
   - job_name: 'node_exporter'
     static_configs:
-    - targets: ['192.168.1.3:9100']
+    - targets: ['10.0.0.10:9100']
   
   - job_name: 'cadvisor'
     consul_sd_configs:
