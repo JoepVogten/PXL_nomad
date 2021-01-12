@@ -1,255 +1,202 @@
-# Ansible
-Ansible binnen mijn infrastructuur
+# Prometheus
+Hieronder staat mijn nomad job voor het opzetten van prometheus binnen mijn cluster. prometheus wordt gepulled met docker en wordt geopend op poort :9090. prometheus heeft een prometheus.yml file nodig met de targets in de gescraped moeten worden. Ik doe dit met behulp van EOH. Ik geef mee dat hij alert-manager, nomad, cadvisor en nog andere services moet zoeken in consul (dynamic). Node-exporter staat er ook in maar dit is static gedefinieerd.
 
-# VAGRANTFILE
-Met de vagrantfile kunnen we een configuratie meegeven voor het opspinnen van verschillende vm's. In deze vagrantfile geef ik aan dat er 3 vm's worden opgespinned. in dit geval 1 server en 2 clients erbij. Ik heb een scriptje gemaakt waarmee ik ansible installeer omdat dit toch in alle 3 de vm's moet gebeuren. De eerste vm die aangemaakt wordt is de server-vm. ik ken het ip 192.168.1.2 toe aan de server. Daarna komt de ansible provision waarbij we niet ansible maar ansible_local moet gebruiken aangezien ik op een windowsmachine te werk ben gegaan. ik geef configfile en playbook en de groups mee. Dit doen we ook voor 2 clients. Deze heb ik in een loop gezet zodat dit niet 2x geschreven moet worden. we gebruiken hier dezelfde configfile maar een ander playbook. De files worden verder in de documentatie besproken.
-```# -*- mode: ruby -*-
-# vi: set ft=ruby :
-VAGRANTFILE_API_VERSION = "2"
-Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
-  config.vm.box = "centos/7"
-  config.vbguest.auto_update = false
-  config.vm.provision "shell", path: "installAns.sh"
-
-  config.vm.define :server do |server|
-    server.vm.hostname = "server"
-    server.vm.network = "private_network", ip: "192.168.1.2"
-
-    server.vm.provision "ansible_local" do |ansible|
-      ansible.config_file = "ansible/ansible/ansible.cfg"
-      ansible.playbook = "ansible/ansible/plays/server.yml"
-      ansible.groups = {
-        "servers" => ["server"],
-#        "servers:vars" => {"software__content" => "servers_value"} 
-      }
-      ansible.host_vars = {
-#        "server" => {"software__content" => "servers_value"}
-      }
-#      ansible.verbose = '-vvv'
-    end
-  end
-
-  (1..2).each do |i|
-    config.vm.define "client#{i}" do |client|
-      client.vm.hostname = "client#{i}"
-      client.vm.network "private_network", ip: "192.168.1.#{i+2}"
-      client.vm.provision "ansible_local" do |ansible|
-        ansible.config_file = "ansible/ansible/ansible.cfg"
-        ansible.playbook = "ansible/ansible/plays/client.yml"
-        ansible.groups = {
-          "clients" => ["client#{i}"],
-#         "clients:vars" => {"software__content" => "clients_value"}
-        }
-        ansible.host_vars = {
-#          "client#{i}" => {"software__content" => "client#{i}_value"}
-        }
-#       ansible.verbose = '-vvv'
-      end
-    end
-  end
-  
-  config.vm.provider :virtualbox do |virtualbox, override|
-    virtualbox.customize ["modifyvm", :id, "--memory", 2048]
-  end
-
-  config.vm.provider :lxc do |lxc, override|
-    override.vm.box = "visibilityspots/centos-7.x-minimal"
-  end
-  
-end
 ```
+job "prometheus" {
+  datacenters = ["dc1"]
+  type        = "service"
 
-# installAns.sh
-Met deze script installeer ik ansible op de vm's.
-```#!/bin/bash
-sudo yum install epel-release -y
-sudo yum install ansible -y
-```
+  group "monitoring" {
+    count = 1
 
-# playbook
-# (server)
-Dit is de ansible playbook voor de server. hier geef je verschillende rollen aan mee zodat ansible deze kan deployen. Ik geef de role docker, consul en nomad mee die later ook besproken worden. 
-```---
-- name: playbook for server vm
-  hosts: servers
-  become: yes
-
-  roles:
-    - role: software/docker
-    - role: software/consul
-    - role: software/nomad
-```
-
-# (client)
-Hetzelfde als bij de server, alleen in dit geval gebruik ik clients i.p.v. servers.
-```---
-- name: playbook for client vm
-  hosts: clients
-  become: yes
-
-  roles:
-    - role: software/docker
-    - role: software/consul
-    - role: software/nomad
-```
-
-# Roles
-# Nomad
-# handlers
-Ik geef mee dat de nomad service herstart moet worden. We gebruiken deze handler later opnieuw.
-```---
-- name: restart nomad
-  service:
-    name: nomad
-    state: restarted
-```
-
-# tasks
-Eerst voeg ik de hashicorp repo toe. Nu installeer ik nomad en voeg ik het nomad-script toe. Ik geef eigenlijk de template mee voor het script. Het script wordt later besproken. verder geef ik de owner nog mee en ook de rechten. De laatste task is het enablen van de service door de bovenstaande handler te gebruiken.
-```---
-- name: add repo
-  command: yum-config-manager --add-repo=https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo
-
-- name: install nomad
-  yum:
-    name: nomad
-    state: installed
-
-- name: add nomad script
-  template:
-    src: nomad.sh.j2
-    dest: /etc/nomad.d/nomad.hc1
-    owner: "root"
-    group: "root"
-    mode: 0744
-
-- name: enable service nomad
-  service:
-    name: nomad
-    enabled: yes
-  notify: restart nomad
-```
-
-# templates
-Dit is de template van de nomad.hcl file. we geven eerst de variabele bind_addr mee en de data dir. Ook zet ik het log_level op debug. Via een if kijken we of de VM een server is of een client. In het eerste geval zou het een server zijn en dan krijgt deze de naam server en wordt de bootstrap_expect op 1 gezet. In het tweede geval is het een client. Deze krijgt het ip van de server maar om de naam te bepalen gebruik ik een nieuwe if-structuur. Omdat ik hier maar 2 clients heb kan ik deze if gebruiken, mochten dit er meer worden moet de if aangepast worden.
-```#!/bin/bash
-# {{ ansible_managed }}
-
-bind_addr = {{ ansible_eth1.ipv4.address }}
-data_dir = "/opt/nomad"
-log_level = "DEBUG"
-
-{% if ansible_hostname == 'SERVER' %}
-    name = "server"
-    server {
-        enabled = true
-        bootstrap_expect = 1
-    }
-{% else %}
-    client {
-        enabled = true
-        servers = ["192.168.1.2"]
+    restart {
+      attempts = 2
+      interval = "30m"
+      delay    = "15s"
+      mode     = "fail"
     }
 
-    {% if ansible_hostname == 'CLIENT1' %}
-        name = "client1"
-    {% else %}
-        name = "client2"
-    {% endif %}
-{% endif %}
+    ephemeral_disk {
+      size = 300
+    }
+
+    task "prometheus" {
+      template {
+        change_mode = "noop"
+        destination = "local/cadvisor_alert.yml"
+        data = <<EOH
+---
+groups:
+- name: prometheus_alerts
+  rules:
+  - alert: cadvisor down
+    expr: absent(up{job="cadvisor"})
+    for: 10s
+    labels:
+      severity: critical
+    annotations:
+      description: "Our cadvisor is down."
+EOH
+      }
+
+      template {
+        change_mode = "noop"
+        destination = "local/prometheus.yml"
+
+        data = <<EOH
+---
+global:
+  scrape_interval:     5s
+  evaluation_interval: 5s
+alerting:
+  alertmanagers:
+  - consul_sd_configs:
+    - server: '{{ env "NOMAD_IP_prometheus_ui" }}:8500'
+      services: ['alertmanager']
+rule_files:
+  - "cadvisor_alert.yml"
+scrape_configs:
+  - job_name: 'alertmanager'
+    consul_sd_configs:
+    - server: '{{ env "NOMAD_IP_prometheus_ui" }}:8500'
+      services: ['alertmanager']
+  - job_name: 'nomad_metrics'
+    consul_sd_configs:
+    - server: '{{ env "NOMAD_IP_prometheus_ui" }}:8500'
+      services: ['nomad-client', 'nomad']
+    relabel_configs:
+    - source_labels: ['__meta_consul_tags']
+      regex: '(.*)http(.*)'
+      action: keep
+    scrape_interval: 5s
+    metrics_path: /v1/metrics
+    params:
+      format: ['prometheus']
+  - job_name: 'node_exporter'
+    static_configs:
+    - targets: ['10.0.0.10:9100']
+  
+  - job_name: 'cadvisor'
+    consul_sd_configs:
+    - server: '{{ env "NOMAD_IP_prometheus_ui" }}:8500'
+      services: ['cadvisor']
+EOH
+      }
+
+      driver = "docker"
+
+      config {
+        image = "prom/prometheus:latest"
+
+        volumes = [
+          "local/prometheus.yml:/etc/prometheus/prometheus.yml",
+        ]
+
+        port_map {
+          prometheus_ui = 9090
+        }
+      }
+
+      resources {
+        network {
+             port "prometheus_ui" {
+             to = 9090
+             static = 9090
+             }
+
+        }
+      }
+      service {
+        name = "prometheus"
+        tags = ["urlprefix-/"]
+        port = "prometheus_ui"
+
+        check {
+          name     = "prometheus_ui port alive"
+          type     = "http"
+          path     = "/-/healthy"
+          interval = "10s"
+          timeout  = "2s"
+        }
+      }
+    }
+  }
+}
 ```
 
-# Consul
-# handlers
-Idem als bij nomad maar dan voor consul-service.
+# software rollen
+## grafana
+### handlers
+We geven hier aan dat dit gerunt gaat worden als een nomad job. Ik geef aan waar de nomad gevonden kan worden en welke job we daarin gaan zetten.
+
 ```---
-- name: restart consul
-  service:
-    name: consul
-    state: restarted
+- name: start grafana job
+  shell: nomad job run -address=http://10.0.0.10:4646/ /opt/nomad/grafana.nomad || exit 0
 ```
-# tasks
-Idem als bij nomad alleen dan met consul.
+### tasks
+Hier geef ik de task op voor de nomad job voor grafana. Ik geef de src mee naar de handler die ik hieronder bespreek. Met de notify geef ik aan dat de job gestart moet worden.
 ```---
-- name: add repo
-  command: yum-config-manager --add-repo=https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo
-
-- name: install consul
-  yum:
-    name: consul
-    state: installed
-
-- name: add consul script
+- name: nomad job grafana
   template:
-    src: consul.sh.j2
-    dest: /etc/consul.d/consul.hc1
-    owner: "root"
-    group: "root"
-    mode: 0744
-
-- name: enable service consul
-  service:
-    name: consul
-    enabled: yes
-  notify: restart consul
-
+    src: grafana.nomad.sh.j2
+    dest: /opt/nomad/grafana.nomad
+  notify: start grafana job
 ```
-# templates
-De template van de script is wel anders bij consul. We geven de standaard variable mee zoals bind_addr en data_dir. We geven ook aan dat de ui true is. Ook controleer ik met een if of het een server is. Als dit true is zeg ik dat het een server is en krijgt hij de variable bootstrap_expect die op 1 staat. Als het geen server is geef ik de retry_join mee.
-```#!/bin/bash
-# {{ ansible_managed }}
+### handlers
+Dit is de template en tevens ook de job voor grafana. Elke job is eigenlijk ongeveer hetzelfde buiten de poortnummers. Grafana staat bijvoorbeeld op poort 3000.
 
-bind_addr = {{ ansible_eth1.ipv4.address }}
-data_dir = "/opt/consul"
-client_addr = "0.0.0.0"
-ui = true
+```job "grafana" {
+    datacenters = ["dc1"]
+    type        = "service"
 
-{% if ansible_hostname == 'SERVER' %}
-    server = true
-    bootstrap_expect = 1
-{% else %}
-    retry_join = ["192.168.1.2"]
-{% endif %}
+    group "grafana" {
+
+        task "grafana"{
+            driver = "docker"
+        
+            config {
+                image = "grafana/grafana"
+                        force_pull = true
+                        port_map   = {
+                            grafana_web = 3000
+                        }
+                        logging {
+                            type = "journald"
+                            config {
+                                tag = "GRAFANA"
+                            }
+                        }
+            }
+
+            service {
+                name = "grafana"
+                port = "grafana_web"
+            }
+            
+            resources {
+                network {
+                    port "grafana_web" {
+                        static = "3000"
+                    }
+                }
+            }
+        }
+    }
+}
 ```
-# Docker
-# handlers
-Idem zoals bij nomad. Alleen met de docker-service
-```---
-- name: restart docker
-  service:
-    name: docker
-    state: restarted
+
+Voor alle andere nieuwe roles heb ik ongeveer dezelfde setup gebruikt. Hieronder alle poortnummers.
+
+```Grafana       :3000 
+Alertmanager  : 9093
+Cadvisor      : 8080
+Prometheus    : 9090
+Node-exporter : 9100
 ```
-# tasks
-Ik voeg eerst de hashicorp repo mee. Dan installeer ik 3 onderstaande services zodat docker werkt. ook enable ik docker door bovenstaande handler te gebruiken.
-```---
-- name: add repo
-  command: yum-config-manager --add-repo=https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo
 
-- name: install docker-ce
-  yum:
-    name: docker-ce
-    state: installed
+# Prometheus targets
 
-- name: install docker-ce-cli
-  yum:
-    name: docker-ce-cli
-    state: installed
+# Grafana dashboard
+helaas kon ik hier niet verder aan werken door fout in mijn docker.
 
-  - name: install container.io
-  yum:
-    name: container.io
-    state: installed
-
-- name: enable service docker
-  service:
-    name: docker
-    enabled: yes
-  notify: restart docker
-```
-# Gebruikte bronnen
-- Slides lessen
-- https://www.vagrantup.com/docs/provisioning/ansible_local
-- https://docs.ansible.com/ansible/latest/collections/ansible/builtin/service_module.html
-- https://www.vagrantup.com/docs/provisioning/ansible_common
-- https://docs.ansible.com/ansible/latest/scenario_guides/guide_vagrant.html
+# Bronvermelding
