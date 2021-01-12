@@ -194,9 +194,12 @@ Prometheus    : 9090
 Node-exporter : 9100
 ```
 
-# Prometheus targets
-
 # Grafana dashboard
 helaas kon ik hier niet verder aan werken door fout in mijn docker.
 
 # Bronvermelding
+- slides uit de lessen
+- https://prometheus.io/docs/prometheus/latest/configuration/configuration/
+- https://prometheus.io/docs/prometheus/latest/configuration/template_examples/
+- https://github.com/google/cadvisor
+- https://learn.hashicorp.com/tutorials/nomad/prometheus-metrics
